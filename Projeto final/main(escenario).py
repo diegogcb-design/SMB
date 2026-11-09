@@ -65,6 +65,10 @@ for i in range(len(mapa)):
 largura_mapa = max(len(linha) for linha in mapa) * TILE_SIZE
 camera_x = 0.0
 
+print("Columnas:", len(mapa[0]))
+print("Ancho del mapa:", largura_mapa)
+print("Posición cámara:", camera_x)
+
 while True:
     dt = min(clock.tick(FPS), 40)
 
