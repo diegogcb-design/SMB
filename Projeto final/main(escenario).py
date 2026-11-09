@@ -25,15 +25,15 @@ tileset = pygame.image.load(os.path.join(pasta_assets, 'tileset_16x16.png')).con
 props = pygame.image.load(os.path.join(pasta_assets, 'props_sheet.png')).convert_alpha()
 
 with open(os.path.join(pasta_assets, 'sprite_index.json'), 'r', encoding='utf-8') as arquivo:
-    indice = json.load(arquivo)
+    indice = json.load(arquivo) #coordenadas do JSON -> diccionario Python
 
-sprites = {}
+sprites = {} #diccionario vazio
 for nome, dados in indice.items():
-    origem = props if dados.get('sheet') == 'props_sheet.png' else tileset
-    area = pygame.Rect(dados['x'], dados['y'], dados['w'], dados['h'])
-    imagem = pygame.Surface((dados['w'], dados['h']), pygame.SRCALPHA)
-    imagem.blit(origem, (0, 0), area)
-    sprites[nome] = pygame.transform.scale(imagem, (dados['w'] * 4, dados['h'] * 4))
+    origem = props if dados.get('sheet') == 'props_sheet.png' else tileset #escolhe de qual png tiramos o sprite
+    area = pygame.Rect(dados['x'], dados['y'], dados['w'], dados['h']) #selecciona o rectangulo a ser recortado con esas coordenadas
+    imagem = pygame.Surface((dados['w'], dados['h']), pygame.SRCALPHA) #cria uma superfície vazia e transparente
+    imagem.blit(origem, (0, 0), area) #copia a parte seleccionada da imagen original para a nova superificie
+    sprites[nome] = pygame.transform.scale(imagem, (dados['w'] * 4, dados['h'] * 4)) #agranda a imagen e guarda no diccionario com seu nome
 
 # Mapa em arquivo de texto
 with open(os.path.join(pasta, 'levels', 'level_1.txt'), 'r', encoding='utf-8') as arquivo:
@@ -55,19 +55,20 @@ for i in range(len(mapa)):
         if mapa[i][j] in blocos_solidos:
             colisores.append(pygame.Rect(j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
+
+largura_mapa = max(len(linha) for linha in mapa) * TILE_SIZE
+camera_x = 0.0
+
 # Posicoes das moedas no mapa (sem coleta nesta versao)
 moedas = []
 for i in range(len(mapa)):
     for j in range(len(mapa[i])):
         if mapa[i][j] == 'C':
-            moedas.append((j * TILE_SIZE + 16, i * TILE_SIZE + 16))
+            moedas.append((j * TILE_SIZE + 16, i * TILE_SIZE + 16)) #centrar a moeda
 
-largura_mapa = max(len(linha) for linha in mapa) * TILE_SIZE
-camera_x = 0.0
-
-print("Columnas:", len(mapa[0]))
-print("Ancho del mapa:", largura_mapa)
-print("Posición cámara:", camera_x)
+#print("Columnas:", len(mapa[0]))
+#print("Ancho del mapa:", largura_mapa)
+#print("Posición cámara:", camera_x)
 
 while True:
     dt = min(clock.tick(FPS), 40)
@@ -89,7 +90,7 @@ while True:
 
     screen.fill((120, 180, 220))
 
-    # Desenhar apenas tiles visiveis
+    # Desenho do mapa
     for i in range(len(mapa)):
         for j in range(len(mapa[i])):
             letra = mapa[i][j]
