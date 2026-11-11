@@ -1,4 +1,3 @@
-
 import pygame
 import sys
 import os
@@ -248,3 +247,4 @@ while True:
 
     # Atualiza a imagem mostrada na janela
     pygame.display.update()
+
