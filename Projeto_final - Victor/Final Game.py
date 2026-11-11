@@ -175,14 +175,14 @@ while True:
                 screen.blit(sprites[nome_moeda], (x_tela, y))  # on la dessine
 
     #Choix de l'image de Mario
-    if not au_sol:                                          # s'il est en l'air
+    if not au_sol:                                          
         sprite = images[SAUT if vitesse_y < 0 else CHUTE]   # image de saut s'il monte, de chute s'il descend
     elif en_mouvement:                                      # s'il marche
         compteur += 1                                       # on avance le compteur
         sprite = images[COURSE[compteur // 6 % len(COURSE)]]  # change d'image de course toutes les 6 images
     else:                                                   # s'il est immobile
-        compteur = 0                                        # on remet le compteur a zero
-        sprite = images[REPOS]                              # image de repos
+        compteur = 0                                        
+        sprite = images[REPOS]                              
 
     screen.blit(transform.flip(sprite, regarde_a_gauche, False), (mario.x - camera_x, mario.y))  # dessine Mario (retourne s'il regarde a gauche)
-    display.update()    # affiche a l'ecran tout ce qu'on vient de dessiner
+    display.update() 
