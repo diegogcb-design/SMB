@@ -2,9 +2,9 @@ from pygame import *
 import os
 
 LARGEUR, HAUTEUR = 800, 600
-SOL = 500          # hauteur du sol (les pieds du mario)
-CASE = 32          # chaque image de la planche fait 32x32
-ECHELLE = 2        # on agrandit les images (32 x 2 = 64 pixels a l'ecran)
+SOL = 500 
+CASE = 32         
+ECHELLE = 2       
 FORCE_SAUT = -18
 
 DEBUT = 8
