@@ -101,41 +101,32 @@ for i in range(len(mapa)):
 #####################################################################################################
 # Personnage
 
-CASE = 32
+CASE = 32     
 ECHELLE = 2
 
-DEBUT = 8
-REPOS = DEBUT
-COURSE = [DEBUT + 1, DEBUT + 2, DEBUT + 3, DEBUT + 2]
-SAUT = DEBUT + 4
-CHUTE = DEBUT + 5
+DEBUT = 8                                             # numero de la premiere image du perso dans la planche
+REPOS = DEBUT                                         
+COURSE = [DEBUT + 1, DEBUT + 2, DEBUT + 3, DEBUT + 2] 
+SAUT = DEBUT + 4                                      
+CHUTE = DEBUT + 5                                     
 
-def charger_planche(nom):
-    # Decoupe la planche en petites images
-    dossier = os.path.dirname(os.path.abspath(__file__))
-    planche = image.load(os.path.join(dossier, nom)).convert_alpha()
+def charger_planche(nom):                                       # decoupe la planche en petites images
+    dossier = os.path.dirname(os.path.abspath(__file__))        # dossier ou se trouve ce fichier .py
+    planche = image.load(os.path.join(dossier, nom)).convert_alpha()  # ouvre l'image (avec transparence)
+    images = []                                                 # liste vide qui va contenir les images
+    for i in range(planche.get_width() // CASE):                # nombre d'images = largeur / 32
+        case = planche.subsurface(Rect(i * CASE, 0, CASE, CASE))  # decoupe la i-eme case
+        images.append(transform.scale(case, (CASE * ECHELLE, CASE * ECHELLE)))  # l'agrandit et l'ajoute a la liste
+    return images                                               # renvoie la liste des images
 
-    images = []
+images = charger_planche("Perso.png")   # toutes les images du perso, rangees dans une liste
 
-    for i in range(planche.get_width() // CASE):
-        case = planche.subsurface(Rect(i * CASE, 0, CASE, CASE))
-        images.append(
-            transform.scale(case, (CASE * ECHELLE, CASE * ECHELLE))
-        )
-
-    return images
-
-images = charger_planche("Perso.png")
-
-DEPART = (100, 8 * TILE_SIZE)
-
-# Rectangle de Mario, avec les pieds sur DEPART
-mario = images[REPOS].get_rect(midbottom=DEPART)
-
-vitesse_y = 0
-au_sol = False
-regarde_a_gauche = False
-compteur = 0
+DEPART = (100, 8 * TILE_SIZE)                     
+mario = images[REPOS].get_rect(midbottom=DEPART)  # rectangle de Mario (position + taille), pieds sur DEPART
+vitesse_y = 0              
+au_sol = False             
+regarde_a_gauche = False   
+compteur = 0               # compte les images pour faire defiler l'animation de course
 
 #####################################################################################################
 
@@ -153,12 +144,12 @@ while True:
     en_mouvement = False
 
     if touches[K_LEFT]:
-        mario.x -= 5
+        mario.x -= 7
         regarde_a_gauche = True
         en_mouvement = True
 
     if touches[K_RIGHT]:
-        mario.x += 5
+        mario.x += 7
         regarde_a_gauche = False
         en_mouvement = True
 
@@ -170,13 +161,12 @@ while True:
             else:
                 mario.right = bloc.left
 
-    # Impede Mario de sair dos limites horizontais do mapa
+    #limite do mapa para Mario
     mario.left = max(0, min(mario.left, largura_mapa - mario.width))
 
     # Saut et gravite
     if touches[K_UP] and au_sol:
         vitesse_y = -22
-
     vitesse_y += 1
     mario.y += vitesse_y
     au_sol = False
@@ -252,20 +242,15 @@ while True:
             if -TILE_SIZE < x_tela < LARGURA:
                 screen.blit(sprites[nome_moeda], (x_tela, y))
 
-    # Choix de l'image de Mario
-    if not au_sol:
-        # Image de saut ou de chute
-        sprite = images[SAUT if vitesse_y < 0 else CHUTE]
-
-    elif en_mouvement:
-        # Animation de course
-        compteur += 1
-        sprite = images[COURSE[compteur // 6 % len(COURSE)]]
-
-    else:
-        # Image de repos
-        compteur = 0
-        sprite = images[REPOS]
+    #Choix de l'image de Mario
+    if not au_sol:                                          
+        sprite = images[SAUT if vitesse_y < 0 else CHUTE]   # image de saut s'il monte, de chute s'il descend
+    elif en_mouvement:                                      # s'il marche
+        compteur += 1                                       # on avance le compteur
+        sprite = images[COURSE[compteur // 6 % len(COURSE)]]  # change d'image de course toutes les 6 images
+    else:                                                   # s'il est immobile
+        compteur = 0                                        
+        sprite = images[REPOS]  
 
     # Dessine Mario e inverte a imagem quando olha para a esquerda
     screen.blit(
