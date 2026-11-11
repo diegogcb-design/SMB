@@ -175,7 +175,7 @@ while True:
 
     # Saut et gravite
     if touches[K_UP] and au_sol:
-        vitesse_y = -18
+        vitesse_y = -22
 
     vitesse_y += 1
     mario.y += vitesse_y
