@@ -127,6 +127,8 @@ vitesse_y = 0
 au_sol = False             
 regarde_a_gauche = False   
 compteur = 0               # compte les images pour faire defiler l'animation de course
+pieces = 0                 # nombre de pieces ramassees
+police = font.Font(None, 48)   # police pour afficher le compteur de pieces
 
 #####################################################################################################
 
@@ -188,6 +190,14 @@ while True:
     if mario.top > ALTURA:
         mario.midbottom = DEPART
         vitesse_y = 0
+        pieces = 0
+    
+    # Ramassage des pieces
+    for moeda in moedas[:]:                     # [:] = copie de la liste, pour pouvoir supprimer dedans
+        x, y = moeda
+        if mario.colliderect(Rect(x + 16, y + 16, 32, 32)):   # Mario touche la piece ?
+            moedas.remove(moeda)                # la piece disparait
+            pieces += 1                         # +1 au compteur
 
     # Camera
     # A camera acompanha Mario horizontalmente
@@ -257,6 +267,10 @@ while True:
         transform.flip(sprite, regarde_a_gauche, False),
         (int(mario.x - camera_x), mario.y)
     )
+
+    # Compteur de pieces en haut a gauche
+    texte = police.render('Moedas : ' + str(pieces), True, (255, 255, 255))
+    screen.blit(texte, (15, 15))
 
     # Atualiza a tela
     display.update()
