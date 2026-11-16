@@ -129,6 +129,7 @@ regarde_a_gauche = False
 compteur = 0               # compte les images pour faire defiler l'animation de course
 pieces = 0                 # nombre de pieces ramassees
 police = font.Font(None, 48)   # police pour afficher le compteur de pieces
+compteur_mort = 3                # nombre de vies restantes
 
 #####################################################################################################
 
@@ -191,6 +192,7 @@ while True:
         mario.midbottom = DEPART
         vitesse_y = 0
         pieces = 0
+        compteur_mort -= 1
     
     # Ramassage des pieces
     for moeda in moedas[:]:                     # [:] = copie de la liste, pour pouvoir supprimer dedans
@@ -270,7 +272,21 @@ while True:
 
     # Compteur de pieces en haut a gauche
     texte = police.render('Moedas : ' + str(pieces), True, (255, 255, 255))
+    if compteur_mort == 2 :
+        vidas = police.render('Vidas : ' + str(compteur_mort), True, "orange")
+    elif compteur_mort == 1 :
+        vidas = police.render('Vidas : ' + str(compteur_mort), True, "red")
+    else :
+        vidas = police.render('Vidas : ' + str(compteur_mort), True, (255, 255, 255))
     screen.blit(texte, (15, 15))
+    screen.blit(vidas, (750, 15))
+
+    if compteur_mort==0:
+        screen.fill("black")
+        mort = police.render("Mario moreu...", True, "red")
+        screen.blit(mort, (350, 300))
+
+
 
     # Atualiza a tela
     display.update()
