@@ -37,7 +37,10 @@ for nome, dados in indice.items():
 
 # Mapa em arquivo de texto
 with open(os.path.join(pasta, 'levels', 'level_1.txt'), 'r', encoding='utf-8') as arquivo:
-    mapa = [linha.rstrip('\n') for linha in arquivo if linha.strip()]
+    mapa = []
+    for linha in arquivo:
+        if linha.strip():
+            mapa.append(linha.rstrip('\n'))
 
 # Letras do mapa e sprites correspondentes
 tiles = {
