@@ -2,10 +2,9 @@ from pygame import *
 import os
 
 LARGEUR, HAUTEUR = 800, 600
-SOL = 500          # hauteur du sol (les pieds du mario)
-CASE = 32          # chaque image de la planche fait 32x32
-ECHELLE = 2        # on agrandit les images (32 x 2 = 64 pixels a l'ecran)
-FORCE_SAUT = -18
+SOL = 500 
+CASE = 32         
+ECHELLE = 2       
 
 DEBUT = 8
 REPOS = DEBUT
@@ -16,7 +15,6 @@ CHUTE = DEBUT + 5
 init()
 screen = display.set_mode((LARGEUR, HAUTEUR))
 clock = time.Clock()
-
 
 def charger_planche(nom):
     dossier = os.path.dirname(os.path.abspath(__file__))
@@ -54,12 +52,10 @@ while running:
         en_mouvement = True
     mario.clamp_ip(Rect(0, -HAUTEUR, LARGEUR, 2 * HAUTEUR))
 
-    # Saut
     if touches[K_UP] and au_sol:
-        vitesse_y = FORCE_SAUT
+        vitesse_y = -18
         au_sol = False
 
-    # Gravite et atterrissage
     vitesse_y += 1
     mario.y += vitesse_y
     if mario.bottom >= SOL:
@@ -67,7 +63,6 @@ while running:
         vitesse_y = 0
         au_sol = True
 
-    # Choix de l'image
     if not au_sol:
         sprite = images[SAUT if vitesse_y < 0 else CHUTE]
     elif en_mouvement:
@@ -77,7 +72,6 @@ while running:
         compteur = 0
         sprite = images[REPOS]
 
-    # Dessin
     screen.fill((120, 190, 255))
     draw.rect(screen, (90, 160, 70), (0, SOL, LARGEUR, HAUTEUR - SOL))
     screen.blit(transform.flip(sprite, regarde_a_gauche, False), mario)
