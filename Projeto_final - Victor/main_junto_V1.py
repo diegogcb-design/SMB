@@ -99,7 +99,7 @@ for i in range(len(mapa)):
             )  # Centraliza a moeda
 
 #####################################################################################################
-# Personnage
+# Mario
 
 CASE = 32     
 ECHELLE = 2
@@ -130,6 +130,34 @@ compteur = 0               # compte les images pour faire defiler l'animation de
 pieces = 0                 # nombre de pieces ramassees
 police = font.Font(None, 48)   # police pour afficher le compteur de pieces
 compteur_mort = 3                # nombre de vies restantes
+
+#####################################################################################################
+# Monstros
+
+def charger_monstre(nom):                                       # decoupe la planche en petites images
+    dossier = os.path.dirname(os.path.abspath(__file__))        # dossier ou se trouve ce fichier .py
+    planche = image.load(os.path.join(dossier, nom)).convert_alpha()  # ouvre l'image (avec transparence)
+    images = []                                                 # liste vide qui va contenir les images
+    for i in range(planche.get_width() // CASE):                # nombre d'images = largeur / 32
+        case = planche.subsurface(Rect(i * CASE, 0, CASE, CASE))  # decoupe la i-eme case
+        images.append(transform.scale(case, (CASE * ECHELLE, CASE * ECHELLE)))  # l'agrandit et l'ajoute a la liste
+    return images 
+
+images_flavio = charger_monstre(os.path.join("Monstres", "flavio.png"))  # 5 images : 0-3 marche, 4 ecrase
+
+MARCHE_FLAVIO = [0, 1, 2, 3]   # images utilisees pour l'animation de marche
+
+# Zone d'aller-retour de Flavio (en pixels dans le MONDE, pas a l'ecran)
+FLAVIO_MIN_X = 26 * TILE_SIZE   # bord gauche de la patrouille (colonne 26 du mapa)
+FLAVIO_MAX_X = 36 * TILE_SIZE   # bord droit de la patrouille  (colonne 36 du mapa)
+FLAVIO_SOL   = 8 * TILE_SIZE    # haut de la ligne 'G' (ligne 8) -> ses pieds sont poses dessus
+
+flavio = images_flavio[0].get_rect(midbottom=(FLAVIO_MIN_X, FLAVIO_SOL))  # rectangle de Flavio
+vitesse_flavio = 2              # pixels par image ; le signe donne la direction (+ droite, - gauche)
+compteur_flavio = 0             # pour faire defiler son animation
+touche_flavio = False           # True tant que Mario est en contact avec Flavio
+
+
 
 #####################################################################################################
 
@@ -201,6 +229,24 @@ while True:
             moedas.remove(moeda)                # la piece disparait
             pieces += 1                         # +1 au compteur
 
+    # Deplacement de Flavio (aller-retour)
+    flavio.x += vitesse_flavio
+    if flavio.right >= FLAVIO_MAX_X:        # arrive au bout a droite -> repart a gauche
+        flavio.right = FLAVIO_MAX_X         # permet de remettre flavio a sa sprint d'avant
+        vitesse_flavio = -vitesse_flavio
+    elif flavio.left <= FLAVIO_MIN_X:       # arrive au bout a gauche -> repart a droite
+        flavio.left = FLAVIO_MIN_X          # permet de remettre flavio a sa sprint d'avant
+        vitesse_flavio = -vitesse_flavio
+    compteur_flavio += 1
+
+    # Mario touche Flavio -> perd UNE seule vie par contact
+    if mario.colliderect(flavio):
+        if not touche_flavio:          # le contact vient de commencer
+            compteur_mort -= 1
+        touche_flavio = True           # tant qu'il reste colle, on ne retire plus rien
+    else:
+        touche_flavio = False          # contact termine -> la prochaine touche comptera
+
     # Camera
     # A camera acompanha Mario horizontalmente
     camera_x = mario.centerx - LARGURA // 2
@@ -253,6 +299,16 @@ while True:
 
             if -TILE_SIZE < x_tela < LARGURA:
                 screen.blit(sprites[nome_moeda], (x_tela, y))
+
+    # Dessin de Flavio
+    image_flavio = images_flavio[MARCHE_FLAVIO[compteur_flavio // 8 % len(MARCHE_FLAVIO)]]
+    x_tela_flavio = int(flavio.x - camera_x)          # position a l'ecran (camera)
+
+    if -flavio.width < x_tela_flavio < LARGURA:        # dessine seulement s'il est visible
+        screen.blit(
+            transform.flip(image_flavio, vitesse_flavio < 0, False),  # regarde dans le sens de la marche
+            (x_tela_flavio, flavio.y)
+        )
 
     #Choix de l'image de Mario
     if not au_sol:                                          
