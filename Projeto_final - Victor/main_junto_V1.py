@@ -157,6 +157,33 @@ vitesse_flavio = 2              # pixels par image ; le signe donne la direction
 compteur_flavio = 0             # pour faire defiler son animation
 touche_flavio = False           # True tant que Mario est en contact avec Flavio
 
+#####################################################################################################
+# Checkpoints (Christ Redempteur)
+
+planche_cristo = image.load(os.path.join(pasta, 'Checkpoints', 'cristo.png')).convert_alpha()
+LARG_CRISTO = planche_cristo.get_width() // 2          # 2 images : 0 = eteint, 1 = active (aureole)
+HAUT_CRISTO = planche_cristo.get_height()
+images_cristo = [
+    transform.scale(
+        planche_cristo.subsurface(Rect(i * LARG_CRISTO, 0, LARG_CRISTO, HAUT_CRISTO)),
+        (LARG_CRISTO * 4, HAUT_CRISTO * 4)              # agrandi x4 comme le tileset
+    )
+    for i in range(2)
+]
+
+# Un checkpoint = la lettre 'X' dans le mapa
+checkpoints = []        # liste de rectangles (zone ou Mario active le checkpoint)
+for i in range(len(mapa)):
+    for j in range(len(mapa[i])):
+        if mapa[i][j] == 'X':
+            checkpoints.append(
+                images_cristo[0].get_rect(midbottom=(j * TILE_SIZE + TILE_SIZE // 2, (i + 1) * TILE_SIZE))
+            )
+
+checkpoints_actives = []        # checkpoints deja touches par Mario (pour l'image avec aureole)
+point_reapparition = DEPART     # ou Mario reapparait apres une mort (au debut : le depart)
+moedas_depart = moedas[:]       # copie des pieces, pour tout remettre en cas de game over
+
 
 
 #####################################################################################################
@@ -215,13 +242,12 @@ while True:
 
             vitesse_y = 0
 
+    mort = False                # devient True si Mario meurt pendant cette image
+
     # Chute dans un trou
     if mario.top > ALTURA:
-        mario.midbottom = DEPART
-        vitesse_y = 0
-        pieces = 0
-        compteur_mort -= 1
-    
+        mort = True
+
     # Ramassage des pieces
     for moeda in moedas[:]:                     # [:] = copie de la liste, pour pouvoir supprimer dedans
         x, y = moeda
@@ -242,10 +268,32 @@ while True:
     # Mario touche Flavio -> perd UNE seule vie par contact
     if mario.colliderect(flavio):
         if not touche_flavio:          # le contact vient de commencer
-            compteur_mort -= 1
+            mort = True
         touche_flavio = True           # tant qu'il reste colle, on ne retire plus rien
     else:
         touche_flavio = False          # contact termine -> la prochaine touche comptera
+
+    # Activation des checkpoints : Mario touche le Christ -> nouveau point de reapparition
+    for cp in checkpoints:
+        if mario.colliderect(cp) and cp not in checkpoints_actives:
+            checkpoints_actives.append(cp)
+            point_reapparition = (cp.centerx, cp.bottom)
+
+    # Mort de Mario (trou ou Flavio)
+    if mort:
+        compteur_mort -= 1
+        vitesse_y = 0
+        pieces = 0
+        if compteur_mort > 0:
+            # Il reste des vies -> retour au dernier checkpoint
+            mario.midbottom = point_reapparition
+        else:
+            # Plus de vies -> tout recommence depuis le debut
+            mario.midbottom = DEPART
+            compteur_mort = 3
+            point_reapparition = DEPART
+            checkpoints_actives = []
+            moedas = moedas_depart[:]
 
     # Camera
     # A camera acompanha Mario horizontalmente
@@ -300,6 +348,13 @@ while True:
             if -TILE_SIZE < x_tela < LARGURA:
                 screen.blit(sprites[nome_moeda], (x_tela, y))
 
+    # Dessin des checkpoints (Christ Redempteur)
+    for cp in checkpoints:
+        x_tela_cp = int(cp.x - camera_x)
+        if -cp.width < x_tela_cp < LARGURA:
+            image_cp = images_cristo[1] if cp in checkpoints_actives else images_cristo[0]
+            screen.blit(image_cp, (x_tela_cp, cp.y))
+
     # Dessin de Flavio
     image_flavio = images_flavio[MARCHE_FLAVIO[compteur_flavio // 8 % len(MARCHE_FLAVIO)]]
     x_tela_flavio = int(flavio.x - camera_x)          # position a l'ecran (camera)
@@ -336,12 +391,6 @@ while True:
         vidas = police.render('Vidas : ' + str(compteur_mort), True, (255, 255, 255))
     screen.blit(texte, (15, 15))
     screen.blit(vidas, (750, 15))
-
-    if compteur_mort==0:
-        screen.fill("black")
-        mort = police.render("Mario moreu...", True, "red")
-        screen.blit(mort, (350, 300))
-
 
 
     # Atualiza a tela
