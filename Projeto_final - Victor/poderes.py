@@ -12,11 +12,7 @@ def carregar_bola():
     # Carrega o spritesheet da bola de futebol
     pasta = os.path.dirname(__file__)
 
-    caminho = os.path.join(
-        pasta,
-        "Sprite de balón de fútbol retro en píxeles.png"
-    )
-
+    caminho = os.path.join(pasta, "balon.png")
     planche = pygame.image.load(caminho).convert_alpha()
 
     print("Tamanho spritesheet:", planche.get_size())
