@@ -201,29 +201,7 @@ police_poder = font.Font(None, 32)
 # FLAVIO
 #####################################################################
 
-def charger_monstre(nom):
-    caminho = os.path.join(pasta, nom)
-    planche = image.load(caminho).convert_alpha()
-
-    imagens = []
-
-    for i in range(planche.get_width() // CASE):
-
-        recorte = planche.subsurface(
-            Rect(i * CASE, 0, CASE, CASE)
-        )
-
-        imagens.append(
-            transform.scale(
-                recorte,
-                (CASE * ECHELLE, CASE * ECHELLE)
-            )
-        )
-
-    return imagens
-
-
-images_flavio = charger_monstre(
+images_flavio = charger_planche(
     os.path.join("Monstres", "flavio.png")
 )
 
@@ -289,18 +267,23 @@ for i in range(2):
         )
     )
 
+#Liste des rectangles des checkpoints
 checkpoints = []
 
+#On parcourt chaque ligne (i) puis chaque colonne (j) de la carte
 for i in range(len(mapa)):
     for j in range(len(mapa[i])):
 
+        #Un "X" dans la carte = un checkpoint
         if mapa[i][j] == "X":
 
+            #Rect de la taille de l'image du cristo, place par le milieu du bas
+            #pour qu'il soit pose sur le sol et centre dans sa case
             checkpoints.append(
                 images_cristo[0].get_rect(
                     midbottom=(
-                        j * TILE_SIZE + TILE_SIZE // 2,
-                        (i + 1) * TILE_SIZE
+                        j * TILE_SIZE + TILE_SIZE // 2,  #x : centre de la case
+                        (i + 1) * TILE_SIZE              #y : bas de la case
                     )
                 )
             )
