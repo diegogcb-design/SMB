@@ -1,6 +1,5 @@
 
 from pygame import *
-import pygame
 import sys
 import os
 import json
@@ -18,7 +17,7 @@ screen = display.set_mode((LARGURA, ALTURA))
 display.set_caption("SMB - Futebol Brasileiro")
 clock = time.Clock()
 
-pasta = os.path.dirname(__file__)
+pasta = os.path.dirname(os.path.abspath(__file__))
 pasta_assets = os.path.join(pasta, "PixelPlatformerTileset")
 
 #####################################################################
@@ -46,7 +45,6 @@ for nome, dados in indice.items():
     origem = props if dados.get("sheet") == "props_sheet.png" else tileset
 
     area = Rect(dados["x"], dados["y"], dados["w"], dados["h"])
-
     imagem = Surface((dados["w"], dados["h"]), SRCALPHA)
     imagem.blit(origem, (0, 0), area)
 
@@ -109,7 +107,10 @@ for i in range(len(mapa)):
                 )
             )
 
-largura_mapa = max(len(linha) for linha in mapa) * TILE_SIZE
+largura_mapa = max(
+    len(linha) for linha in mapa
+) * TILE_SIZE
+
 camera_x = 0
 
 #####################################################################
@@ -143,11 +144,14 @@ CHUTE = DEBUT + 5
 
 
 def charger_planche(nom):
-    # Recorta imagens de 32x32 e amplia para 64x64
+    # Recorta sprites de 32x32 e amplia para 64x64
     caminho = os.path.join(pasta, nom)
     planche = image.load(caminho).convert_alpha()
 
     imagens = []
+
+    if planche.get_width() % CASE != 0:
+        raise ValueError("Largura incorreta do spritesheet: " + nom)
 
     for i in range(planche.get_width() // CASE):
 
@@ -164,24 +168,18 @@ def charger_planche(nom):
     return imagens
 
 
-# Personagem normal
+# Sprites do personagem
 images = charger_planche("Perso.png")
-
-# Personagem brasileiro com o poder
 images_futebol = charger_planche("Perso_futebol.png")
 
-# Verifica se os spritesheets possuem os frames necessarios
-if len(images) <= CHUTE:
-    raise ValueError("Perso.png nao possui frames suficientes")
+if len(images) <= CHUTE or len(images_futebol) <= CHUTE:
+    raise ValueError("Spritesheet sem frames suficientes")
 
-if len(images_futebol) <= CHUTE:
-    raise ValueError("Perso_futebol.png nao possui frames suficientes")
-
-print("Frames do personagem normal:", len(images))
-print("Frames do futebolista:", len(images_futebol))
+print("Frames normais:", len(images))
+print("Frames brasileiros:", len(images_futebol))
 
 #####################################################################
-# CONFIGURACOES DO PERSONAGEM
+# MARIO
 #####################################################################
 
 DEPART = (100, 8 * TILE_SIZE)
@@ -211,8 +209,9 @@ def charger_monstre(nom):
 
     for i in range(planche.get_width() // CASE):
 
-        area = Rect(i * CASE, 0, CASE, CASE)
-        recorte = planche.subsurface(area)
+        recorte = planche.subsurface(
+            Rect(i * CASE, 0, CASE, CASE)
+        )
 
         imagens.append(
             transform.scale(
@@ -230,12 +229,14 @@ images_flavio = charger_monstre(
 
 MARCHE_FLAVIO = [0, 1, 2, 3]
 
-FLAVIO_MIN_X = 26 * TILE_SIZE
-FLAVIO_MAX_X = 36 * TILE_SIZE
+# Flavio fica perto do inicio do mapa
+FLAVIO_MIN_X = 500
+FLAVIO_MAX_X = 1100
+FLAVIO_INICIO_X = 650
 FLAVIO_SOL = 8 * TILE_SIZE
 
 flavio = images_flavio[0].get_rect(
-    midbottom=(FLAVIO_MIN_X, FLAVIO_SOL)
+    midbottom=(FLAVIO_INICIO_X, FLAVIO_SOL)
 )
 
 vitesse_flavio = 2
@@ -251,7 +252,11 @@ def reiniciar_flavio():
     global flavio_vivo
 
     flavio_vivo = True
-    flavio.midbottom = (FLAVIO_MIN_X, FLAVIO_SOL)
+
+    flavio.midbottom = (
+        FLAVIO_INICIO_X,
+        FLAVIO_SOL
+    )
 
     vitesse_flavio = 2
     compteur_flavio = 0
@@ -304,7 +309,7 @@ checkpoints_actives = []
 point_reapparition = DEPART
 
 #####################################################################
-# PODER DA BOLA DE FUTEBOL
+# PODER DA BOLA
 #####################################################################
 
 frames_bola = carregar_bola()
@@ -327,7 +332,6 @@ while True:
     dt = min(clock.tick(FPS), 40)
 
     for ev in event.get():
-
         if ev.type == QUIT:
             quit()
             sys.exit()
@@ -339,25 +343,30 @@ while True:
     #################################################################
 
     en_mouvement = False
+    movimento_x = 0
 
     if touches[K_LEFT]:
-        mario.x -= 7
+        movimento_x -= 7
         regarde_a_gauche = True
         en_mouvement = True
 
     if touches[K_RIGHT]:
-        mario.x += 7
+        movimento_x += 7
         regarde_a_gauche = False
         en_mouvement = True
 
+    mario.x += movimento_x
+
+    # Colisao horizontal com os blocos
     for bloc in colisores:
 
         if mario.colliderect(bloc):
 
-            if regarde_a_gauche:
-                mario.left = bloc.right
-            else:
+            if movimento_x > 0:
                 mario.right = bloc.left
+
+            elif movimento_x < 0:
+                mario.left = bloc.right
 
     mario.left = max(
         0,
@@ -374,7 +383,6 @@ while True:
     vitesse_y += 1
 
     topo_anterior = mario.top
-
     mario.y += vitesse_y
     au_sol = False
 
@@ -384,16 +392,14 @@ while True:
 
             if vitesse_y > 0:
 
-                # Mario estava caindo
                 mario.bottom = bloc.top
                 au_sol = True
 
             elif vitesse_y < 0:
 
-                # Mario estava subindo
                 mario.top = bloc.bottom
 
-                # Verifica se bateu na parte inferior
+                # Detecta quando Mario bate no bloco por baixo
                 if topo_anterior >= bloc.bottom:
 
                     coluna = bloc.x // TILE_SIZE
@@ -407,7 +413,7 @@ while True:
 
                             blocos_usados.add(posicao_bloco)
 
-                            # Transforma Q em U
+                            # Bloco dourado vira bloco usado
                             mapa[linha][coluna] = "U"
 
                             # Cria a bola dentro do bloco
@@ -417,9 +423,14 @@ while True:
                                 frames_bola
                             )
 
-                            bolas_colecionaveis.append(nova_bola)
+                            bolas_colecionaveis.append(
+                                nova_bola
+                            )
 
-                            print("Bola criada no bloco:", linha, coluna)
+                            print(
+                                "Bola criada no bloco:",
+                                linha, coluna
+                            )
 
             vitesse_y = 0
 
@@ -434,7 +445,6 @@ while True:
             tem_poder_bola = True
 
             print("Mario ganhou o poder da bola!")
-            print("Transformacao em jogador brasileiro!")
 
     #################################################################
     # DISPARO COM F
@@ -467,17 +477,13 @@ while True:
             ultimo_disparo = agora
 
     #################################################################
-    # QUEDA EM BURACO
+    # QUEDA E MOEDAS
     #################################################################
 
     mort = False
 
     if mario.top > ALTURA:
         mort = True
-
-    #################################################################
-    # MOEDAS
-    #################################################################
 
     for moeda in moedas[:]:
 
@@ -486,6 +492,7 @@ while True:
         if mario.colliderect(
             Rect(x + 16, y + 16, 32, 32)
         ):
+
             moedas.remove(moeda)
             pieces += 1
 
@@ -498,10 +505,12 @@ while True:
         flavio.x += vitesse_flavio
 
         if flavio.right >= FLAVIO_MAX_X:
+
             flavio.right = FLAVIO_MAX_X
             vitesse_flavio = -2
 
         elif flavio.left <= FLAVIO_MIN_X:
+
             flavio.left = FLAVIO_MIN_X
             vitesse_flavio = 2
 
@@ -570,7 +579,7 @@ while True:
         au_sol = False
         pieces = 0
 
-        # Mario perde o poder e volta ao sprite normal
+        # Mario perde o poder
         tem_poder_bola = False
 
         # Remove os projeteis
@@ -593,8 +602,10 @@ while True:
             checkpoints_actives = []
             moedas = moedas_depart[:]
 
-            # Restaura os blocos Q
-            mapa = [list(linha) for linha in mapa_original]
+            mapa = [
+                list(linha)
+                for linha in mapa_original
+            ]
 
             blocos_usados.clear()
             bolas_colecionaveis.clear()
@@ -633,7 +644,8 @@ while True:
                 x_tela = int(j * TILE_SIZE - camera_x)
 
                 y_tela = (
-                    (i + 1) * TILE_SIZE - imagem.get_height()
+                    (i + 1) * TILE_SIZE
+                    - imagem.get_height()
                 )
 
                 if letra == "V":
@@ -691,22 +703,14 @@ while True:
     #################################################################
 
     for bola in bolas_colecionaveis:
-
-        bola.desenhar(
-            screen,
-            camera_x
-        )
+        bola.desenhar(screen, camera_x)
 
     #################################################################
     # DESENHO DOS PROJETEIS
     #################################################################
 
     for projetil in projeteis:
-
-        projetil.desenhar(
-            screen,
-            camera_x
-        )
+        projetil.desenhar(screen, camera_x)
 
     #################################################################
     # DESENHO DE FLAVIO
@@ -724,28 +728,26 @@ while True:
 
         x_tela_flavio = int(flavio.x - camera_x)
 
-        if -flavio.width < x_tela_flavio < LARGURA:
-
-            screen.blit(
-                transform.flip(
-                    imagem_flavio,
-                    vitesse_flavio < 0,
-                    False
-                ),
-                (x_tela_flavio, flavio.y)
-            )
+        # Desenha Flavio na posicao correta da camera
+        screen.blit(
+            transform.flip(
+                imagem_flavio,
+                vitesse_flavio < 0,
+                False
+            ),
+            (x_tela_flavio, flavio.y)
+        )
 
     #################################################################
-    # ANIMACAO DO PERSONAGEM
+    # ANIMACAO DE MARIO
     #################################################################
 
-    # Usa o spritesheet brasileiro quando possui o poder
+    # Mario muda para o futebolista ao ganhar o poder
     if tem_poder_bola:
         imagens_ativas = images_futebol
     else:
         imagens_ativas = images
 
-    # Ambos os spritesheets usam os mesmos indices
     if not au_sol:
 
         if vitesse_y < 0:
@@ -770,7 +772,6 @@ while True:
         compteur = 0
         sprite = imagens_ativas[REPOS]
 
-    # Desenha o personagem
     screen.blit(
         transform.flip(
             sprite,
@@ -795,8 +796,10 @@ while True:
 
     if compteur_mort == 2:
         cor_vidas = "orange"
+
     elif compteur_mort == 1:
         cor_vidas = "red"
+
     else:
         cor_vidas = (255, 255, 255)
 
@@ -809,7 +812,6 @@ while True:
     screen.blit(texto_moedas, (15, 15))
     screen.blit(texto_vidas, (750, 15))
 
-    # Mostra quando Mario tem o poder
     if tem_poder_bola:
 
         texto_poder = police_poder.render(
