@@ -265,7 +265,7 @@ mixer.music.set_volume(0.4)
 mixer.music.play(-1)
 
 # Efeito sonoro do Flavio
-som_flavio = mixer.Sound(os.path.join(pasta, "flavio.wav"))
+som_flavio = mixer.Sound(os.path.join(pasta, "flavio.mp3"))
 som_flavio.set_volume(0.8)
 
 while True:
