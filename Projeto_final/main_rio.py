@@ -249,6 +249,12 @@ TEMPO_ENTRE_DISPAROS = 350      # temps minimum entre deux tirs (en ms)
 
 #####################################################################################################
 
+# Musica de fundo - funk carioca
+mixer.init()
+mixer.music.load(os.path.join(pasta, "musica.mp3"))
+mixer.music.set_volume(0.4)
+mixer.music.play(-1)
+
 while True:
     dt = min(clock.tick(FPS), 40)
 
