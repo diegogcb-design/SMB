@@ -145,8 +145,8 @@ images_flavio = charger_planche(os.path.join("Monstres", "flavio.png"))  # 5 ima
 MARCHE_FLAVIO = [0, 1, 2, 3]   # images utilisees pour l'animation de marche
 
 # Zone d'aller-retour de Flavio (en pixels dans le MONDE, pas a l'ecran)
-FLAVIO_MIN_X = 26 * TILE_SIZE   # bord gauche de la patrouille (colonne 26 du mapa)
-FLAVIO_MAX_X = 36 * TILE_SIZE   # bord droit de la patrouille  (colonne 36 du mapa)
+FLAVIO_MIN_X = 5 * TILE_SIZE    # bord gauche de la patrouille (colonne 5 du mapa)
+FLAVIO_MAX_X = 12 * TILE_SIZE   # bord droit de la patrouille (colonne 12 du mapa)
 FLAVIO_SOL   = 8 * TILE_SIZE    # haut de la ligne 'G' (ligne 8) -> ses pieds sont poses dessus
 
 flavio = images_flavio[0].get_rect(midbottom=(FLAVIO_MIN_X, FLAVIO_SOL))  # rectangle de Flavio
