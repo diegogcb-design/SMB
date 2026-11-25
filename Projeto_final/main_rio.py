@@ -183,6 +183,8 @@ def reiniciar_flavio():                 # remet Flavio vivant a sa position de d
     compteur_flavio = 0
     touche_flavio = False
 
+#PALMIER
+
 def charger_palmier(nom):                                       # decoupe la planche en petites images
     dossier = os.path.dirname(os.path.abspath(__file__))        # dossier ou se trouve ce fichier .py
     planche = image.load(os.path.join(dossier, nom)).convert_alpha()  # ouvre l'image (avec transparence)
@@ -214,6 +216,29 @@ def reiniciar_palmier():                 # remet le palmier vivant a sa position
     compteur_palmier = 0
     touche_palmier = False
     touche_palmier = False
+
+# LULA
+
+images_lula = charger_planche(os.path.join("Monstres", "lula.png"))  # 4 images : 0-3 marche
+
+MARCHE_LULA = [0, 1, 2, 3]   # images utilisees pour l'animation de marche de la lula
+LULA_MIN_X = 51 * TILE_SIZE    # bord gauche de la patrouille (colonne 5 du mapa)  # bord droit de la patrouille
+LULA_SOL   = 5 * TILE_SIZE    # haut de la ligne 'G'
+
+lula = images_lula[0].get_rect(midbottom=(LULA_MIN_X, LULA_SOL))  # rectangle de la lula
+
+vitesse_lula = -9              # pixels par image ; le signe donne la direction (+ droite, - gauche)
+compteur_lula = 0             # pour faire defiler son animation
+touche_lula = False           # True tant que Mario est en contact avec la lula
+lula_viva = True              # False quand la lula a ete touche par un ballon
+
+def reiniciar_lula():                 # remet la lula vivante a sa position de depart
+    global vitesse_lula, compteur_lula, touche_lula, lula_viva
+    lula_viva = True
+    lula.midbottom = (LULA_MIN_X, LULA_SOL)
+    vitesse_lula = 2
+    compteur_lula = 0
+    touche_lula = False
 
 #####################################################################################################
 # Checkpoints (Christ Redempteur)
@@ -389,6 +414,17 @@ while True:
             vitesse_palmier = 3
         compteur_palmier += 1
 
+    if lula_viva:
+        lula.y += vitesse_lula
+        if lula.bottom >= LULA_SOL:  # Si il arrive en bas
+            lula.bottom = LULA_SOL  # Il reste dans la limite
+            vitesse_lula = -9  # Il remonte
+        elif lula.bottom <= LULA_SOL - 4 * TILE_SIZE:  # Si il arrive en haut
+            lula.bottom = LULA_SOL - 4 * TILE_SIZE  # Il reste dans la limite
+            vitesse_lula = 9  # Il redescend
+
+    compteur_lula += 1  # Anime Lula
+
     # Deplacement des ballons tires + Flavio elimine s'il est touche
     for projetil in projeteis[:]:
         projetil.atualizar(colisores, largura_mapa)
@@ -397,6 +433,9 @@ while True:
             projetil.ativo = False
         if palmier_vivo and projetil.ativo and projetil.rect.colliderect(palmier):
             palmier_vivo = False
+            projetil.ativo = False
+        if lula_viva and projetil.ativo and projetil.rect.colliderect(lula):
+            lula_viva = False
             projetil.ativo = False
         if not projetil.ativo:
             projeteis.remove(projetil)
@@ -417,6 +456,13 @@ while True:
         touche_palmier = True           # tant qu'il reste colle, on ne retire plus rien``
     else:
         touche_palmier = False          # contact termine -> la prochaine touche comptera   
+
+    if lula_viva and mario.colliderect(lula):
+        if not touche_lula:          # le contact vient de commencer
+            mort = True
+        touche_lula = True           # tant qu'il reste colle, on ne retire plus rien``
+    else:
+        touche_lula = False          # contact termine -> la prochaine touche comptera
 
     # Activation des checkpoints : Mario touche le Christ -> nouveau point de reapparition
     for cp in checkpoints:
@@ -439,6 +485,7 @@ while True:
         projeteis.clear()               # les ballons tires disparaissent
         reiniciar_flavio()              # Flavio revient
         reiniciar_palmier()             # le palmier revient
+        reiniciar_lula()                 # la lula revient
         if compteur_mort > 0:
             # Il reste des vies -> retour au dernier checkpoint
             mario.midbottom = point_reapparition
@@ -525,7 +572,6 @@ while True:
     if flavio_vivo:
         image_flavio = images_flavio[MARCHE_FLAVIO[compteur_flavio // 8 % len(MARCHE_FLAVIO)]]
         x_tela_flavio = int(flavio.x - camera_x)          # position a l'ecran (camera)
-
         if -flavio.width < x_tela_flavio < LARGURA:        # dessine seulement s'il est visible
             screen.blit(
                 transform.flip(image_flavio, vitesse_flavio < 0, False),  # regarde dans le sens de la marche
@@ -535,11 +581,19 @@ while True:
     if palmier_vivo:
         image_palmier = images_palmier[MARCHE_PALMIER[compteur_palmier // 8 % len(MARCHE_PALMIER)]]
         x_tela_palmier = int(palmier.x - camera_x)          # position a l'ecran (camera)
-
         if -palmier.width < x_tela_palmier < LARGURA:        # dessine seulement s'il est visible
             screen.blit(
                 transform.flip(image_palmier, vitesse_palmier < 0, False),  # regarde dans le sens de la marche
                 (x_tela_palmier, palmier.y)
+            )
+
+    if lula_viva:
+        image_lula = images_lula[MARCHE_LULA[compteur_lula // 8 % len(MARCHE_LULA)]]
+        x_tela_lula = int(lula.x - camera_x)          # position a l'ecran (camera)
+        if -lula.width < x_tela_lula < LARGURA:        # dessine seulement s'il est visible
+            screen.blit(
+                transform.flip(image_lula, vitesse_lula < 0, False),  # regarde dans le sens de la marche
+                (x_tela_lula, lula.y)
             )
 
     #Choix de l'image de Mario (en footballeur s'il a le pouvoir)
