@@ -187,7 +187,7 @@ images_palmier = charger_planche(os.path.join("Monstres", "palmier.png"))  # 4 i
 
 MARCHE_PALMIER = [0, 1, 2, 3]   # images utilisees pour l'animation de marche du palmier
 PALMIER_MIN_X = 23 * TILE_SIZE    # bord gauche de la patrouille (colonne 5 du mapa)
-PALMIER_MAX_X = 30 * TILE_SIZE   # bord droit de la patrouille (colonne 12 du mapa)
+PALMIER_MAX_X = 26 * TILE_SIZE   # bord droit de la patrouille (colonne 12 du mapa)
 PALMIER_SOL   = 8 * TILE_SIZE    # haut de la ligne 'G' (ligne 8) -> ses pieds sont poses dessus
 
 palmier = images_palmier[0].get_rect(midbottom=(PALMIER_MIN_X, PALMIER_SOL))  # rectangle du palmier
@@ -252,8 +252,12 @@ TEMPO_ENTRE_DISPAROS = 350      # temps minimum entre deux tirs (en ms)
 # Musica de fundo - funk carioca
 mixer.init()
 mixer.music.load(os.path.join(pasta, "musica.mp3"))
-mixer.music.set_volume(0.2)
+mixer.music.set_volume(0.4)
 mixer.music.play(-1)
+
+# Efeito sonoro do Flavio
+som_flavio = mixer.Sound(os.path.join(pasta, "flavio.wav"))
+som_flavio.set_volume(0.8)
 
 while True:
     dt = min(clock.tick(FPS), 40)
@@ -382,16 +386,13 @@ while True:
         if flavio_vivo and projetil.ativo and projetil.rect.colliderect(flavio):
             flavio_vivo = False
             projetil.ativo = False
-        if palmier_vivo and projetil.ativo and projetil.rect.colliderect(palmier):
-            palmier_vivo = False
-            projetil.ativo = False
         if not projetil.ativo:
             projeteis.remove(projetil)
-
 
     # Mario touche Flavio -> perd UNE seule vie par contact
     if flavio_vivo and mario.colliderect(flavio):
         if not touche_flavio:          # le contact vient de commencer
+            som_flavio.play()
             mort = True
         touche_flavio = True           # tant qu'il reste colle, on ne retire plus rien
     else:
