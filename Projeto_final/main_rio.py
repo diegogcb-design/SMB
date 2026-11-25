@@ -18,8 +18,16 @@ screen = display.set_mode((LARGURA, ALTURA))
 display.set_caption('SMB - Cenario e Camera')
 clock = time.Clock()
 
-pasta = os.path.dirname(__file__)
+pasta = os.path.dirname(os.path.abspath(__file__))
 pasta_assets = os.path.join(pasta, 'PixelPlatformerTileset')
+
+# Aceita os arquivos tanto na pasta principal quanto nas subpastas.
+def localizar_arquivo(nome, *pastas):
+    for pasta_opcao in pastas:
+        caminho = os.path.join(pasta_opcao, nome)
+        if os.path.isfile(caminho):
+            return caminho
+    raise FileNotFoundError(f'Arquivo {nome} nao encontrado em: {pastas}')
 
 # Imagens e indice do pacote
 # Os sprites sao ampliados 4 vezes
@@ -50,17 +58,17 @@ for nome, dados in indice.items():
     )
 
 # Cenario do Rio: panorama e tiles originais em pixel art
-planche_rio = image.load(os.path.join(pasta_assets, 'rio_tiles.png')).convert_alpha()
+planche_rio = image.load(localizar_arquivo('rio_tiles.png', pasta, pasta_assets)).convert_alpha()
 letras_rio = 'a1fb2gc3hd4ie5jklmnozp'
 for i, letra in enumerate(letras_rio):
     area_rio = Rect(i * 16, 0, 16, 16)
     sprites['rio_' + letra] = transform.scale(planche_rio.subsurface(area_rio), (TILE_SIZE, TILE_SIZE))
 
-fundo_rio = image.load(os.path.join(pasta_assets, 'rio_bg.png')).convert()
+fundo_rio = image.load(localizar_arquivo('rio_bg.png', pasta, pasta_assets)).convert()
 fundo_rio = transform.scale(fundo_rio, (fundo_rio.get_width() * 4, ALTURA))
 
 # Mapa em arquivo de texto
-with open(os.path.join(pasta, 'levels', 'level_1.txt'), 'r', encoding='utf-8') as arquivo:
+with open(localizar_arquivo('level_1.txt', pasta, os.path.join(pasta, 'levels')), 'r', encoding='utf-8') as arquivo:
     mapa_original = [linha.rstrip('\n') for linha in arquivo if linha.strip()]
 
 mapa = [list(linha) for linha in mapa_original]   # liste de listes : permet de changer un 'Q' en 'U'
@@ -263,27 +271,34 @@ while True:
     mario.y += vitesse_y
     au_sol = False
 
-    # Colisao vertical com os blocos
-    for bloc in colisores:
-        if mario.colliderect(bloc):
-            if vitesse_y > 0:
-                # Mario estava caindo
-                mario.bottom = bloc.top
-                au_sol = True
-            elif vitesse_y < 0:
-                # Mario estava subindo
-                mario.top = bloc.bottom
+    # Colisao vertical: encontra todos os blocos antes de corrigir a posicao.
+    blocos_tocados = [bloc for bloc in colisores if mario.colliderect(bloc)]
 
-                # Mario tape un bloc '?' par dessous -> un ballon en sort
-                if topo_anterior >= bloc.bottom:              # sa tete etait sous le bloc avant de bouger
-                    linha = bloc.y // TILE_SIZE               # pixels -> ligne du mapa
-                    coluna = bloc.x // TILE_SIZE              # pixels -> colonne du mapa
-                    if mapa[linha][coluna] == 'Q' and (linha, coluna) not in blocos_usados:   # bloc '?' pas encore frappe
+    if blocos_tocados:
+        if vitesse_y > 0:
+            # Mario estava caindo: pousa na superficie mais alta.
+            mario.bottom = min(bloc.top for bloc in blocos_tocados)
+            au_sol = True
+
+        elif vitesse_y < 0:
+            # Mario estava subindo: encontra o teto atingido primeiro.
+            limite = max(bloc.bottom for bloc in blocos_tocados)
+
+            # Verifica todos os blocos nesse teto, inclusive os blocos Q.
+            for bloc in blocos_tocados:
+                if bloc.bottom == limite and topo_anterior >= bloc.bottom:
+                    linha = bloc.y // TILE_SIZE
+                    coluna = bloc.x // TILE_SIZE
+                    if mapa[linha][coluna] == 'Q' and (linha, coluna) not in blocos_usados:
                         blocos_usados.add((linha, coluna))
-                        mapa[linha][coluna] = 'U'             # le bloc devient un bloc utilise
-                        bolas_colecionaveis.append(BolaColecionavel(bloc.x, bloc.y, frames_bola))   # le ballon sort du bloc
+                        mapa[linha][coluna] = 'U'
+                        bolas_colecionaveis.append(
+                            BolaColecionavel(bloc.x, bloc.y, frames_bola)
+                        )
 
-            vitesse_y = 0
+            mario.top = limite
+
+        vitesse_y = 0
 
     # Ramassage du ballon -> Mario gagne le pouvoir
     for bola in bolas_colecionaveis:
@@ -352,6 +367,11 @@ while True:
         au_sol = False
         pieces = 0
         tem_poder_bola = False          # Mario perd le pouvoir
+        # Reativa os blocos de poder depois de perder uma vida.
+        for linha, coluna in blocos_usados:
+            mapa[linha][coluna] = 'Q'
+        blocos_usados.clear()
+        bolas_colecionaveis.clear()
         projeteis.clear()               # les ballons tires disparaissent
         reiniciar_flavio()              # Flavio revient
         if compteur_mort > 0:

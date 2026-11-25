@@ -5,7 +5,7 @@ import os
 import json
 from pygame.locals import QUIT
 
-from poderes import carregar_bola, BolaColecionavel, ProjetilBola   # super-pouvoir du ballon
+from Projeto_final.poderes import carregar_bola, BolaColecionavel, ProjetilBola   # super-pouvoir du ballon
 
 init()
 
