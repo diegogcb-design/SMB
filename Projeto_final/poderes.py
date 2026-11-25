@@ -11,23 +11,53 @@ VELOCIDADE_BOLA = 12
 def carregar_bola():
     # Carrega a planilha de sprites da bola
     pasta = os.path.dirname(__file__)
-    caminho = os.path.join(pasta,"Sprite de balón de fútbol retro en píxeles.png")
+
+    caminho = os.path.join(
+        pasta,
+        "Sprite de balón de fútbol retro en píxeles.png"
+    )
 
     planche = pygame.image.load(caminho).convert_alpha()
+
     frames = []
 
-    # Cada imagem tem 64x64 pixels
+    # Calcula as dimensoes de cada frame
+    largura_frame = planche.get_width() // NUM_FRAMES
+    altura_frame = planche.get_height()
+
     for i in range(NUM_FRAMES):
-        area = pygame.Rect(i * TAMANHO_FRAME, 0,
-                           TAMANHO_FRAME, TAMANHO_FRAME)
+
+        # Divide a planilha em 8 partes
+        area = pygame.Rect(
+            i * largura_frame,
+            0,
+            largura_frame,
+            altura_frame
+        )
 
         frame = planche.subsurface(area).copy()
+
+        # Remove as margens transparentes
+        limite = frame.get_bounding_rect(min_alpha=32)
+
+        if limite.width == 0 or limite.height == 0:
+            raise ValueError(f"Frame {i} da bola esta vazio")
+
+        frame = frame.subsurface(limite).copy()
+
+        # Redimensiona a bola para 64x64 pixels
+        frame = pygame.transform.scale(
+            frame,
+            (TAMANHO_FRAME, TAMANHO_FRAME)
+        )
+
         frames.append(frame)
 
     return frames
 
 
 class BolaColecionavel:
+
     def __init__(self, x, y, frames):
         self.frames = frames
 
@@ -41,40 +71,52 @@ class BolaColecionavel:
         self.saindo = True
 
     def atualizar(self, mario):
+
         if self.coletada:
             return False
 
         # Animacao da bola saindo do bloco
         if self.saindo:
+
             self.rect.y -= 4
 
             if self.rect.y <= self.y_final:
+
                 self.rect.y = self.y_final
                 self.saindo = False
 
         # Mario so pode pegar depois que a bola saiu
         elif self.rect.colliderect(mario):
+
             self.coletada = True
             return True
 
         return False
 
     def desenhar(self, tela, camera_x):
+
         if not self.coletada:
+
+            # Animacao da rotacao da bola
             indice = (
                 pygame.time.get_ticks() // 120
             ) % len(self.frames)
 
             imagem = self.frames[indice]
 
-            tela.blit(imagem, (
-                int(self.rect.x - camera_x),
-                self.rect.y
-            ))
+            tela.blit(
+                imagem,
+                (
+                    int(self.rect.x - camera_x),
+                    self.rect.y
+                )
+            )
 
 
 class ProjetilBola:
+
     def __init__(self, x, y, direcao, frames):
+
         # O projetil e menor que a bola colecionavel
         self.frames = [
             pygame.transform.scale(frame, (32, 32))
@@ -82,6 +124,7 @@ class ProjetilBola:
         ]
 
         self.rect = pygame.Rect(x, y, 32, 32)
+
         self.direcao = direcao
         self.ativo = True
 
@@ -89,25 +132,31 @@ class ProjetilBola:
         self.distancia = 0
 
     def atualizar(self, colisores, largura_mapa):
+
         if not self.ativo:
             return
 
         # Movimento horizontal da bola
         movimento = VELOCIDADE_BOLA * self.direcao
+
         self.rect.x += movimento
         self.distancia += movimento
 
         # Colisao com os blocos do cenario
         for bloco in colisores:
+
             if self.rect.colliderect(bloco):
+
                 self.ativo = False
                 break
 
-        # Remove a bola fora dos limites
+        # Remove a bola fora dos limites do mapa
         if self.rect.right < 0 or self.rect.left > largura_mapa:
+
             self.ativo = False
 
     def desenhar(self, tela, camera_x):
+
         if not self.ativo:
             return
 
@@ -120,9 +169,15 @@ class ProjetilBola:
 
         # Inverte a animacao ao disparar para a esquerda
         if self.direcao < 0:
-            imagem = pygame.transform.flip(imagem, True, False)
 
-        tela.blit(imagem, (
-            int(self.rect.x - camera_x),
-            self.rect.y
-        ))
+            imagem = pygame.transform.flip(
+                imagem, True, False
+            )
+
+        tela.blit(
+            imagem,
+            (
+                int(self.rect.x - camera_x),
+                self.rect.y
+            )
+        )
