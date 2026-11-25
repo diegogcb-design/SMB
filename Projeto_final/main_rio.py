@@ -183,7 +183,16 @@ def reiniciar_flavio():                 # remet Flavio vivant a sa position de d
     compteur_flavio = 0
     touche_flavio = False
 
-images_palmier = charger_planche(os.path.join("Monstres", "palmier.png"))  # 4 images : 0-3 marche
+def charger_palmier(nom):                                       # decoupe la planche en petites images
+    dossier = os.path.dirname(os.path.abspath(__file__))        # dossier ou se trouve ce fichier .py
+    planche = image.load(os.path.join(dossier, nom)).convert_alpha()  # ouvre l'image (avec transparence)
+    images = []                                                 # liste vide qui va contenir les images
+    for i in range(planche.get_width() // CASE):                # nombre d'images = largeur / 32
+        case = planche.subsurface(Rect(i * CASE, 0, CASE, CASE))  # decoupe la i-eme case
+        images.append(transform.scale(case, (CASE * 4, CASE * 4)))  # l'agrandit et l'ajoute a la liste
+    return images  
+
+images_palmier = charger_palmier(os.path.join("Monstres", "palmier.png"))  # 4 images : 0-3 marche
 
 MARCHE_PALMIER = [0, 1, 2, 3]   # images utilisees pour l'animation de marche du palmier
 PALMIER_MIN_X = 23 * TILE_SIZE    # bord gauche de la patrouille (colonne 5 du mapa)
