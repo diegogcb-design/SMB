@@ -183,6 +183,29 @@ def reiniciar_flavio():                 # remet Flavio vivant a sa position de d
     compteur_flavio = 0
     touche_flavio = False
 
+images_palmier = charger_planche(os.path.join("Monstres", "palmier.png"))  # 4 images : 0-3 marche
+
+MARCHE_PALMIER = [0, 1, 2, 3]   # images utilisees pour l'animation de marche du palmier
+PALMIER_MIN_X = 23 * TILE_SIZE    # bord gauche de la patrouille (colonne 5 du mapa)
+PALMIER_MAX_X = 26 * TILE_SIZE   # bord droit de la patrouille (colonne 12 du mapa)
+PALMIER_SOL   = 8 * TILE_SIZE    # haut de la ligne 'G' (ligne 8) -> ses pieds sont poses dessus
+
+palmier = images_palmier[0].get_rect(midbottom=(PALMIER_MIN_X, PALMIER_SOL))  # rectangle du palmier
+
+vitesse_palmier = 3              # pixels par image ; le signe donne la direction (+ droite, - gauche)
+compteur_palmier = 0             # pour faire defiler son animation
+touche_palmier = False           # True tant que Mario est en contact avec le palmier
+palmier_vivo = True              # False quand le palmier a ete touche par un ballon
+
+def reiniciar_palmier():                 # remet le palmier vivant a sa position de depart
+    global vitesse_palmier, compteur_palmier, touche_palmier, palmier_vivo
+    palmier_vivo = True
+    palmier.midbottom = (PALMIER_MIN_X, PALMIER_SOL)
+    vitesse_palmier = 3
+    compteur_palmier = 0
+    touche_palmier = False
+    touche_palmier = False
+
 #####################################################################################################
 # Checkpoints (Christ Redempteur)
 
@@ -337,6 +360,16 @@ while True:
             vitesse_flavio = 2
         compteur_flavio += 1
 
+    if palmier_vivo:
+        palmier.x += vitesse_palmier
+        if palmier.right >= PALMIER_MAX_X:        # arrive au bout a droite -> repart a gauche
+            palmier.right = PALMIER_MAX_X         # permet de remettre le palmier a sa sprint d'avant
+            vitesse_palmier = -3
+        elif palmier.left <= PALMIER_MIN_X:       # arrive au bout a gauche -> repart a droite
+            palmier.left = PALMIER_MIN_X          # permet de remettre le palmier a sa sprint d'avant
+            vitesse_palmier = 3
+        compteur_palmier += 1
+
     # Deplacement des ballons tires + Flavio elimine s'il est touche
     for projetil in projeteis[:]:
         projetil.atualizar(colisores, largura_mapa)
@@ -353,6 +386,13 @@ while True:
         touche_flavio = True           # tant qu'il reste colle, on ne retire plus rien
     else:
         touche_flavio = False          # contact termine -> la prochaine touche comptera
+
+    if palmier_vivo and mario.colliderect(palmier):
+        if not touche_palmier:          # le contact vient de commencer
+            mort = True
+        touche_palmier = True           # tant qu'il reste colle, on ne retire plus rien``
+    else:
+        touche_palmier = False          # contact termine -> la prochaine touche comptera   
 
     # Activation des checkpoints : Mario touche le Christ -> nouveau point de reapparition
     for cp in checkpoints:
@@ -374,6 +414,7 @@ while True:
         bolas_colecionaveis.clear()
         projeteis.clear()               # les ballons tires disparaissent
         reiniciar_flavio()              # Flavio revient
+        reiniciar_palmier()             # le palmier revient
         if compteur_mort > 0:
             # Il reste des vies -> retour au dernier checkpoint
             mario.midbottom = point_reapparition
@@ -465,6 +506,16 @@ while True:
             screen.blit(
                 transform.flip(image_flavio, vitesse_flavio < 0, False),  # regarde dans le sens de la marche
                 (x_tela_flavio, flavio.y)
+            )
+
+    if palmier_vivo:
+        image_palmier = images_palmier[MARCHE_PALMIER[compteur_palmier // 8 % len(MARCHE_PALMIER)]]
+        x_tela_palmier = int(palmier.x - camera_x)          # position a l'ecran (camera)
+
+        if -palmier.width < x_tela_palmier < LARGURA:        # dessine seulement s'il est visible
+            screen.blit(
+                transform.flip(image_palmier, vitesse_palmier < 0, False),  # regarde dans le sens de la marche
+                (x_tela_palmier, palmier.y)
             )
 
     #Choix de l'image de Mario (en footballeur s'il a le pouvoir)
