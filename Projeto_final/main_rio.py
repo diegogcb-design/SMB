@@ -183,20 +183,11 @@ def reiniciar_flavio():                 # remet Flavio vivant a sa position de d
     compteur_flavio = 0
     touche_flavio = False
 
-def charger_palmier(nom):                                       # decoupe la planche en petites images
-    dossier = os.path.dirname(os.path.abspath(__file__))        # dossier ou se trouve ce fichier .py
-    planche = image.load(os.path.join(dossier, nom)).convert_alpha()  # ouvre l'image (avec transparence)
-    images = []                                                 # liste vide qui va contenir les images
-    for i in range(planche.get_width() // CASE):                # nombre d'images = largeur / 32
-        case = planche.subsurface(Rect(i * CASE, 0, CASE, CASE))  # decoupe la i-eme case
-        images.append(transform.scale(case, (CASE * 4, CASE * 4)))  # l'agrandit et l'ajoute a la liste
-    return images  
-
-images_palmier = charger_palmier(os.path.join("Monstres", "palmier.png"))  # 4 images : 0-3 marche
+images_palmier = charger_planche(os.path.join("Monstres", "palmier.png"))  # 4 images : 0-3 marche
 
 MARCHE_PALMIER = [0, 1, 2, 3]   # images utilisees pour l'animation de marche du palmier
 PALMIER_MIN_X = 23 * TILE_SIZE    # bord gauche de la patrouille (colonne 5 du mapa)
-PALMIER_MAX_X = 30 * TILE_SIZE   # bord droit de la patrouille (colonne 12 du mapa)
+PALMIER_MAX_X = 26 * TILE_SIZE   # bord droit de la patrouille (colonne 12 du mapa)
 PALMIER_SOL   = 8 * TILE_SIZE    # haut de la ligne 'G' (ligne 8) -> ses pieds sont poses dessus
 
 palmier = images_palmier[0].get_rect(midbottom=(PALMIER_MIN_X, PALMIER_SOL))  # rectangle du palmier
@@ -261,12 +252,25 @@ TEMPO_ENTRE_DISPAROS = 350      # temps minimum entre deux tirs (en ms)
 # Musica de fundo - funk carioca
 mixer.init()
 mixer.music.load(os.path.join(pasta, "musica.mp3"))
-mixer.music.set_volume(0.25)
+mixer.music.set_volume(0.4)
 mixer.music.play(-1)
 
 # Efeito sonoro do Flavio
-som_flavio = mixer.Sound(os.path.join(pasta, "flavio.mp3"))
+som_flavio = mixer.Sound(os.path.join(pasta, "flavio.wav"))
 som_flavio.set_volume(0.8)
+
+# Efeitos sonoros do jogo
+som_salto = mixer.Sound(os.path.join(pasta, "salto.wav"))
+som_moeda = mixer.Sound(os.path.join(pasta, "moeda.wav"))
+som_chute = mixer.Sound(os.path.join(pasta, "chute.wav"))
+som_morte = mixer.Sound(os.path.join(pasta, "morte.wav"))
+som_bloco = mixer.Sound(os.path.join(pasta, "bloco.wav"))
+
+som_salto.set_volume(0.4)
+som_moeda.set_volume(0.5)
+som_chute.set_volume(0.6)
+som_morte.set_volume(0.5)
+som_bloco.set_volume(0.5)
 
 while True:
     dt = min(clock.tick(FPS), 40)
@@ -308,6 +312,7 @@ while True:
     # Saut et gravite
     if touches[K_UP] and au_sol:
         vitesse_y = -22
+        som_salto.play()
     vitesse_y += 1
     topo_anterior = mario.top   # haut de Mario avant de bouger (pour savoir s'il tape un bloc par dessous)
     mario.y += vitesse_y
@@ -334,6 +339,7 @@ while True:
                     if mapa[linha][coluna] == 'Q' and (linha, coluna) not in blocos_usados:
                         blocos_usados.add((linha, coluna))
                         mapa[linha][coluna] = 'U'
+                        som_bloco.play()
                         bolas_colecionaveis.append(
                             BolaColecionavel(bloc.x, bloc.y, frames_bola)
                         )
@@ -354,7 +360,9 @@ while True:
         x_bola = mario.left - 32 if regarde_a_gauche else mario.right   # le ballon part devant Mario
         projeteis.append(ProjetilBola(x_bola, mario.centery - 16, direcao, frames_bola))
         ultimo_disparo = agora
+        som_chute.play()
 
+    mort_flavio = False
     mort = False                # devient True si Mario meurt pendant cette image
 
     # Chute dans un trou
@@ -366,6 +374,7 @@ while True:
         x, y = moeda
         if mario.colliderect(Rect(x + 16, y + 16, 32, 32)):   # Mario touche la piece ?
             moedas.remove(moeda)                # la piece disparait
+            som_moeda.play()
             pieces += 1                         # +1 au compteur
 
     # Deplacement de Flavio (aller-retour)
@@ -395,17 +404,15 @@ while True:
         if flavio_vivo and projetil.ativo and projetil.rect.colliderect(flavio):
             flavio_vivo = False
             projetil.ativo = False
-        if palmier_vivo and projetil.ativo and projetil.rect.colliderect(palmier):
-            palmier_vivo = False
-            projetil.ativo = False
         if not projetil.ativo:
             projeteis.remove(projetil)
-
 
     # Mario touche Flavio -> perd UNE seule vie par contact
     if flavio_vivo and mario.colliderect(flavio):
         if not touche_flavio:          # le contact vient de commencer
+            som_morte.stop()
             som_flavio.play()
+            mort_flavio = True
             mort = True
         touche_flavio = True           # tant qu'il reste colle, on ne retire plus rien
     else:
@@ -426,6 +433,9 @@ while True:
 
     # Mort de Mario (trou ou Flavio)
     if mort:
+        if not mort_flavio:
+            som_morte.stop()
+            som_morte.play()
         compteur_mort -= 1
         vitesse_y = 0
         au_sol = False
