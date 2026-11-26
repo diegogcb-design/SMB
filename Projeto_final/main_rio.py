@@ -110,7 +110,28 @@ for i in range(len(mapa)):
             )
 
 largura_mapa = max(len(linha) for linha in mapa) * TILE_SIZE
+# As dez linhas de baixo formam a faixa de jogo original.
+altura_extra = max(0, len(mapa) - 10) * TILE_SIZE
 camera_x = 0.0
+camera_y = altura_extra
+
+ceu_alto = transform.scale(fundo_rio.subsurface((0, 0, fundo_rio.get_width(), 1)),
+                           (fundo_rio.get_width(), max(1, altura_extra // 3 + 1)))
+
+# Fachadas em segundo plano. Janelas e sombras distinguem as paredes da rota jogável.
+for marca, janela, parede in [(':', 'g', '2'), (';', 'j', '5'), (',', 'h', '3')]:
+    for chave in [janela, parede]:
+        fundo = sprites['rio_' + chave].copy()
+        fundo.fill((146, 153, 176), special_flags=BLEND_RGB_MULT)
+        sprites['parede_' + chave] = fundo
+    tiles[marca] = 'parede_' + parede
+janelas = {':': 'parede_g', ';': 'parede_j', ',': 'parede_h'}
+
+# Varal de bandeirinhas entre as duas marcas no terraço.
+varais = []
+for i, linha in enumerate(mapa):
+    postes = [j for j, letra in enumerate(linha) if letra == '~']
+    varais.extend((a, b, i) for a, b in zip(postes[::2], postes[1::2]))
 
 # Posicoes das moedas no mapa (sem coleta nesta versao)
 moedas = []
@@ -146,7 +167,7 @@ def charger_planche(nom):                                       # decoupe la pla
 images = charger_planche("Perso.png")   # toutes les images du perso, rangees dans une liste
 images_futebol = charger_planche("Perso_futebol.png")   # images du perso en footballeur (avec le pouvoir)
 
-DEPART = (100, 8 * TILE_SIZE)                     
+DEPART = (100, altura_extra + 8 * TILE_SIZE)                     
 mario = images[REPOS].get_rect(midbottom=DEPART)  # rectangle de Mario (position + taille), pieds sur DEPART
 vitesse_y = 0              
 au_sol = False             
@@ -167,7 +188,7 @@ MARCHE_FLAVIO = [0, 1, 2, 3]   # images utilisees pour l'animation de marche
 # Zone d'aller-retour de Flavio (en pixels dans le MONDE, pas a l'ecran)
 FLAVIO_MIN_X = 5 * TILE_SIZE    # bord gauche de la patrouille (colonne 5 du mapa)
 FLAVIO_MAX_X = 12 * TILE_SIZE   # bord droit de la patrouille (colonne 12 du mapa)
-FLAVIO_SOL   = 8 * TILE_SIZE    # haut de la ligne 'G' (ligne 8) -> ses pieds sont poses dessus
+FLAVIO_SOL   = altura_extra + 8 * TILE_SIZE    # haut de la ligne 'G' (ligne 8) -> ses pieds sont poses dessus
 
 flavio = images_flavio[0].get_rect(midbottom=(FLAVIO_MIN_X, FLAVIO_SOL))  # rectangle de Flavio
 vitesse_flavio = 2              # pixels par image ; le signe donne la direction (+ droite, - gauche)
@@ -197,7 +218,7 @@ images_palmier = charger_palmier(os.path.join("Monstres", "palmier.png"))  # 4 i
 MARCHE_PALMIER = [0, 1, 2, 3]   # images utilisees pour l'animation de marche du palmier
 PALMIER_MIN_X = 23 * TILE_SIZE    # bord gauche de la patrouille (colonne 5 du mapa)
 PALMIER_MAX_X = 26 * TILE_SIZE   # bord droit de la patrouille (colonne 12 du mapa)
-PALMIER_SOL   = 8 * TILE_SIZE    # haut de la ligne 'G' (ligne 8) -> ses pieds sont poses dessus
+PALMIER_SOL   = altura_extra + 8 * TILE_SIZE    # haut de la ligne 'G' (ligne 8) -> ses pieds sont poses dessus
 
 palmier = images_palmier[0].get_rect(midbottom=(PALMIER_MIN_X, PALMIER_SOL))  # rectangle du palmier
 
@@ -221,7 +242,7 @@ images_lula = charger_planche(os.path.join("Monstres", "lula.png"))  # 4 images 
 
 MARCHE_LULA = [0, 1, 2, 3]   # images utilisees pour l'animation de marche de la lula
 LULA_MIN_X = 51 * TILE_SIZE    # bord gauche de la patrouille (colonne 5 du mapa)  # bord droit de la patrouille
-LULA_SOL   = 5 * TILE_SIZE    # haut de la ligne 'G'
+LULA_SOL   = altura_extra + 5 * TILE_SIZE    # haut de la ligne 'G'
 
 lula = images_lula[0].get_rect(midbottom=(LULA_MIN_X, LULA_SOL))  # rectangle de la lula
 
@@ -316,7 +337,7 @@ mastro = Rect(coluna_meta * TILE_SIZE + 24, base_meta - 4 * TILE_SIZE, 8, 4 * TI
 
 def desenhar_meta():
     x = mastro.x - int(camera_x)
-    y = mastro.top
+    y = mastro.top - camera_y
     draw.rect(screen, (236, 238, 226), (x, y, mastro.width, mastro.height))
     draw.circle(screen, (255, 205, 57), (x + 4, y), 7)
     draw.rect(screen, (19, 145, 79), (x + 8, y + 6, 56, 36))
@@ -449,7 +470,7 @@ while True:
     mort = False                # devient True si Mario meurt pendant cette image
 
     # Chute dans un trou
-    if mario.top > ALTURA:
+    if mario.top > altura_extra + ALTURA:
         mort = True
 
     # Ramassage des pieces
@@ -577,9 +598,17 @@ while True:
         min(camera_x, max(0, largura_mapa - LARGURA))
     )
 
+    # Zona morta: a câmera começa a subir perto do topo da tela.
+    if mort:
+        camera_y = max(0, min(altura_extra, mario.bottom - 440))
+    camera_y = max(0, min(altura_extra, min(camera_y, mario.top - 100)))
+    camera_y = min(altura_extra, max(camera_y, mario.bottom - 445))
+
     # Parallax: a cidade se move mais devagar do que o primeiro plano.
     deslocamento_fundo = min(int(camera_x * 0.53), fundo_rio.get_width() - LARGURA)
-    screen.blit(fundo_rio, (-deslocamento_fundo, 0))
+    ceu = (altura_extra - camera_y) // 3
+    screen.blit(ceu_alto, (-deslocamento_fundo, ceu - ceu_alto.get_height()))
+    screen.blit(fundo_rio, (-deslocamento_fundo, ceu))
 
     # Dessin du mapa
     for i in range(len(mapa)):
@@ -589,14 +618,17 @@ while True:
 
             if letra in tiles:
                 # Busca a imagem correspondente a letra
-                imagem = sprites[tiles[letra]]
+                chave = tiles[letra]
+                if letra in janelas and j % 3 == 1 and i % 2 == 0:
+                    chave = janelas[letra]
+                imagem = sprites[chave]
 
                 # Calcula a posicao horizontal considerando a camera
                 x_tela = int(j * TILE_SIZE - camera_x)
 
                 # Ajusta a altura dos objetos maiores que um bloco
                 # Assim as arvores crescem para cima
-                y_tela = (i + 1) * TILE_SIZE - imagem.get_height()
+                y_tela = (i + 1) * TILE_SIZE - imagem.get_height() - camera_y
 
                 # Ajusta o arbusto para ficar mais perto do chao
                 if letra == 'V':
@@ -608,6 +640,24 @@ while True:
                 if -largura_imagem < x_tela < LARGURA:
                     screen.blit(imagem, (x_tela, y_tela))
 
+    for inicio, fim, linha in varais:
+        x1 = inicio*TILE_SIZE + 12 - camera_x
+        x2 = (fim+1)*TILE_SIZE - 12 - camera_x
+        if x2 < 0 or x1 >= LARGURA:
+            continue
+        base = (linha+1)*TILE_SIZE - camera_y
+        for x in (x1, x2):
+            draw.line(screen, (87, 63, 65), (x, base), (x, base-78), 4)
+        cores = [(255, 194, 62), (45, 160, 111), (245, 109, 89), (100, 175, 211)]
+        pontos = []
+        for k in range(17):
+            t = k/16
+            x = round(x1 + (x2-x1)*t)
+            y = round(base-76 + 75*t*(1-t))
+            pontos.append((x,y))
+            if 0 < k < 16:
+                draw.polygon(screen, cores[k%4], [(x-6,y), (x+6,y), (x,y+13)])
+        draw.lines(screen, (71, 63, 72), False, pontos, 2)
     desenhar_meta()
 
     # Dessin des pieces
@@ -622,20 +672,20 @@ while True:
             x_tela = int(x - camera_x)
 
             if -TILE_SIZE < x_tela < LARGURA:
-                screen.blit(sprites[nome_moeda], (x_tela, y))
+                screen.blit(sprites[nome_moeda], (x_tela, y - camera_y))
 
     # Dessin des checkpoints (Christ Redempteur)
     for cp in checkpoints:
         x_tela_cp = int(cp.x - camera_x)                # position a l'ecran (on enleve le decalage de la camera)
         if -cp.width < x_tela_cp < LARGURA:            # dessine seulement s'il est visible
             image_cp = images_cristo[1] if cp in checkpoints_actives else images_cristo[0]   # avec aureole s'il est active
-            screen.blit(image_cp, (x_tela_cp, cp.y))
+            screen.blit(image_cp, (x_tela_cp, cp.y - camera_y))
 
     # Dessin des ballons (a ramasser et tires)
     for bola in bolas_colecionaveis:
-        bola.desenhar(screen, camera_x)
+        bola.desenhar(screen, camera_x, camera_y)
     for projetil in projeteis:
-        projetil.desenhar(screen, camera_x)
+        projetil.desenhar(screen, camera_x, camera_y)
 
     # Dessin de Flavio
     if flavio_vivo:
@@ -644,7 +694,7 @@ while True:
         if -flavio.width < x_tela_flavio < LARGURA:        # dessine seulement s'il est visible
             screen.blit(
                 transform.flip(image_flavio, vitesse_flavio < 0, False),  # regarde dans le sens de la marche
-                (x_tela_flavio, flavio.y)
+                (x_tela_flavio, flavio.y - camera_y)
             )
 
     if palmier_vivo:
@@ -653,7 +703,7 @@ while True:
         if -palmier.width < x_tela_palmier < LARGURA:        # dessine seulement s'il est visible
             screen.blit(
                 transform.flip(image_palmier, vitesse_palmier < 0, False),  # regarde dans le sens de la marche
-                (x_tela_palmier, palmier.y)
+                (x_tela_palmier, palmier.y - camera_y)
             )
 
     if lula_viva:
@@ -662,7 +712,7 @@ while True:
         if -lula.width < x_tela_lula < LARGURA:        # dessine seulement s'il est visible
             screen.blit(
                 transform.flip(image_lula, vitesse_lula < 0, False),  # regarde dans le sens de la marche
-                (x_tela_lula, lula.y)
+                (x_tela_lula, lula.y - camera_y)
             )
 
     #Choix de l'image de Mario (en footballeur s'il a le pouvoir)
@@ -679,7 +729,7 @@ while True:
     # Dessine Mario e inverte a imagem quando olha para a esquerda
     screen.blit(
         transform.flip(sprite, regarde_a_gauche, False),
-        (int(mario.x - camera_x), mario.y)
+        (int(mario.x - camera_x), mario.y - camera_y)
     )
 
     # Compteur de pieces en haut a gauche

@@ -93,7 +93,7 @@ class BolaColecionavel:
 
         return False
 
-    def desenhar(self, tela, camera_x):
+    def desenhar(self, tela, camera_x, camera_y=0):
 
         if not self.coletada:
 
@@ -108,7 +108,7 @@ class BolaColecionavel:
                 imagem,
                 (
                     int(self.rect.x - camera_x),
-                    self.rect.y
+                    self.rect.y - camera_y
                 )
             )
 
@@ -155,7 +155,7 @@ class ProjetilBola:
 
             self.ativo = False
 
-    def desenhar(self, tela, camera_x):
+    def desenhar(self, tela, camera_x, camera_y=0):
 
         if not self.ativo:
             return
@@ -178,6 +178,6 @@ class ProjetilBola:
             imagem,
             (
                 int(self.rect.x - camera_x),
-                self.rect.y
+                self.rect.y - camera_y
             )
         )
