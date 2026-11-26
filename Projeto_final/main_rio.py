@@ -1,7 +1,6 @@
 # Configuração e arquivos do jogo
 # ----------------------------------------------------------------------
 
-
 from pygame import *
 import sys
 import os
