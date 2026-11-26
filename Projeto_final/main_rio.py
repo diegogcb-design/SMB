@@ -295,22 +295,72 @@ som_flavio.set_volume(0.8)
 som_salto = mixer.Sound(os.path.join(pasta, "salto.wav"))
 som_moeda = mixer.Sound(os.path.join(pasta, "moeda.wav"))
 som_chute = mixer.Sound(os.path.join(pasta, "chute.wav"))
-som_morte = mixer.Sound(os.path.join(pasta, "morte.wav"))
+# O arquivo morte.wav contem o efeito de power-up.
+# Aceita tambem powerup.wav caso o arquivo tenha sido renomeado.
+arquivo_powerup = os.path.join(pasta, "powerup.wav")
+if not os.path.isfile(arquivo_powerup):
+    arquivo_powerup = os.path.join(pasta, "morte.wav")
+som_powerup = mixer.Sound(arquivo_powerup)
 som_bloco = mixer.Sound(os.path.join(pasta, "bloco.wav"))
 
 som_salto.set_volume(0.4)
 som_moeda.set_volume(0.5)
 som_chute.set_volume(0.6)
-som_morte.set_volume(0.5)
+som_powerup.set_volume(0.5)
 som_bloco.set_volume(0.5)
+
+# A exclamação marca o pé do mastro no arquivo do nível.
+linha_meta, coluna_meta = next((i, linha.index('!')) for i, linha in enumerate(mapa) if '!' in linha)
+base_meta = (linha_meta + 1) * TILE_SIZE
+mastro = Rect(coluna_meta * TILE_SIZE + 24, base_meta - 4 * TILE_SIZE, 8, 4 * TILE_SIZE)
+
+def desenhar_meta():
+    x = mastro.x - int(camera_x)
+    y = mastro.top
+    draw.rect(screen, (236, 238, 226), (x, y, mastro.width, mastro.height))
+    draw.circle(screen, (255, 205, 57), (x + 4, y), 7)
+    draw.rect(screen, (19, 145, 79), (x + 8, y + 6, 56, 36))
+    draw.polygon(screen, (255, 216, 55), [(x+12, y+24), (x+36, y+9), (x+60, y+24), (x+36, y+39)])
+    draw.circle(screen, (35, 68, 146), (x+36, y+24), 9)
+
+def painel(titulo, linhas):
+    caixa = Rect(120, 174, 660, 250)
+    draw.rect(screen, (23, 42, 54), caixa, border_radius=12)
+    draw.rect(screen, (255, 205, 57), caixa, 3, border_radius=12)
+    for i, linha in enumerate([titulo, *linhas]):
+        fonte = police if i == 0 else police_poder
+        cor = (255, 215, 65) if i == 0 else (255, 255, 255)
+        texto = fonte.render(linha, True, cor)
+        screen.blit(texto, texto.get_rect(center=(caixa.centerx, caixa.top + 52 + 46*i)))
+
+estado = 'inicio'
 
 while True:
     dt = min(clock.tick(FPS), 40)
 
     for ev in event.get():
-        if ev.type == QUIT:
+        if ev.type == QUIT or (ev.type == KEYDOWN and ev.key == K_ESCAPE):
             quit()
             sys.exit()
+
+        if ev.type == KEYDOWN and ev.key == K_RETURN:
+            if estado == 'inicio':
+                estado = 'jogando'
+            elif estado == 'final':
+                quit()
+                sys.exit()
+
+    if estado == 'inicio':
+        screen.blit(fundo_rio, (0, 0))
+        painel('Mario no Rio', ['Setas para mover e pular   |   F para chutar',
+                               'Chegue à bandeira brasileira', 'Enter para jogar'])
+        display.flip()
+        continue
+    if estado == 'final':
+        # Seu colega pode substituir este painel pela tela final.
+        painel('Chegou à bandeira!', [f'Moedas: {pieces}', 'Enter para sair'])
+        display.flip()
+        continue
 
     touches = key.get_pressed()
 
@@ -383,6 +433,8 @@ while True:
     # Ramassage du ballon -> Mario gagne le pouvoir
     for bola in bolas_colecionaveis:
         if bola.atualizar(mario):
+            if not tem_poder_bola:
+                som_powerup.play()
             tem_poder_bola = True
 
     # Tir d'un ballon avec la touche F
@@ -394,7 +446,6 @@ while True:
         ultimo_disparo = agora
         som_chute.play()
 
-    mort_flavio = False
     mort = False                # devient True si Mario meurt pendant cette image
 
     # Chute dans un trou
@@ -456,9 +507,7 @@ while True:
     # Mario touche Flavio -> perd UNE seule vie par contact
     if flavio_vivo and mario.colliderect(flavio):
         if not touche_flavio:          # le contact vient de commencer
-            som_morte.stop()
             som_flavio.play()
-            mort_flavio = True
             mort = True
         touche_flavio = True           # tant qu'il reste colle, on ne retire plus rien
     else:
@@ -486,9 +535,7 @@ while True:
 
     # Mort de Mario (trou ou Flavio)
     if mort:
-        if not mort_flavio:
-            som_morte.stop()
-            som_morte.play()
+        som_powerup.stop()
         compteur_mort -= 1
         vitesse_y = 0
         au_sol = False
@@ -516,6 +563,9 @@ while True:
             mapa = [list(linha) for linha in mapa_original]   # les blocs '?' reviennent
             blocos_usados.clear()
             bolas_colecionaveis.clear()
+
+    if not mort and mario.colliderect(mastro):
+        estado = 'final'
 
     # Camera
     # A camera acompanha Mario horizontalmente
@@ -557,6 +607,8 @@ while True:
 
                 if -largura_imagem < x_tela < LARGURA:
                     screen.blit(imagem, (x_tela, y_tela))
+
+    desenhar_meta()
 
     # Dessin des pieces
     # Alterna entre as quatro imagens da moeda
